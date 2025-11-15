@@ -5,9 +5,11 @@ import Footer from './pages/Footer'
 import  AccordionUsage from './pages/Questions.jsx'
 import TweetGrid from './pages/Tweets'
 import { Results } from './pages/Results'
+import { Analytics } from "@vercel/analytics/react"
 function App() {
   return (
     <div className="min-h-screen w-full relative bg-black">
+      <Analytics/>
 
       {/* Global Background Layer */}
       <div

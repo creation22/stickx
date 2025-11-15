@@ -152,7 +152,7 @@ export default function TweetMarquee() {
         .tweet-container article > div {
           display: flex !important;
           flex-direction: row !important;
-          gap: 16px !important;
+          gap: 12px !important;
           padding: 0 !important;
           margin: 0 !important;
         }
@@ -160,13 +160,8 @@ export default function TweetMarquee() {
         .tweet-container article > div > div {
           display: flex !important;
           flex-direction: column !important;
-          gap: 6px !important;
+          gap: 4px !important;
           flex: 1 !important;
-        }
-        
-        /* Add spacing around tweet content */
-        .tweet-container article {
-          padding: 8px 0 !important;
         }
         
         /* Profile picture - Twitter-like size */
@@ -209,16 +204,6 @@ export default function TweetMarquee() {
         .tweet-container [data-testid="copy-link"],
         .tweet-container button,
         .tweet-container a[role="button"] {
-          display: none !important;
-        }
-        
-        /* Hide follow buttons and text */
-        .tweet-container [aria-label*="Follow"],
-        .tweet-container [aria-label*="follow"],
-        .tweet-container button[aria-label*="Follow"],
-        .tweet-container button[aria-label*="follow"],
-        .tweet-container span:contains("Follow"),
-        .tweet-container *:contains("Follow") {
           display: none !important;
         }
         
