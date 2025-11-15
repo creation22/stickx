@@ -1,9 +1,7 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import { Tweet } from "react-tweet";
-import { AnimatePresence, motion } from "motion/react";
-import { cn } from "../lib/utils";
-import { ShineBorder } from "../components/ui/shine-border";
+import { IconBrandX } from "@tabler/icons-react";
 
 const tweets = [
   "1989525157162152280",
@@ -17,76 +15,32 @@ const tweets = [
 
 export default function TweetMarquee() {
   const duplicatedTweets = [...tweets, ...tweets];
-  const [hoveredIndex, setHoveredIndex] = useState(null);
 
   return (
     <div className="w-full flex flex-col bg-[#151515]/20 backdrop-blur-xl relative">
       <div className="py-8 border-b border-[#252525]">
-        <motion.h2
-          initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{
-            duration: 0.6,
-            ease: "easeOut",
-            type: "spring",
-            delay: 0.4,
-          }}
-          className="text-center text-3xl tracking-tight font-medium text-white"
-        >
+        <h2 className="text-center text-3xl tracking-tight font-medium text-white">
           Our Top Tweets
-        </motion.h2>
+        </h2>
       </div>
 
       <div className="w-full relative border-b border-[#252525] py-10">
         <div className="tweet-marquee-wrapper">
           <div className="tweet-marquee">
             {duplicatedTweets.map((id, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                transition={{
-                  duration: 0.6,
-                  ease: "easeOut",
-                  type: "spring",
-                  delay: 0.5 + (index % tweets.length) * 0.1,
-                }}
-                className="tweet-card-wrapper group"
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
-              >
-                <div className="border-dashed border-[#252525] w-full mx-auto relative h-full">
-                  <div className="w-full h-full w-[320px] relative overflow-hidden mx-auto py-6 pb-10 flex flex-col rounded-3xl">
-                    <ShineBorder shineColor={["#7150E7", "#C89BFF", "#432BA0"]}>
-                      <div className="w-full h-full relative overflow-hidden rounded-3xl bg-black/60 backdrop-blur-xl">
-                        <AnimatePresence>
-                          {hoveredIndex === index && (
-                            <motion.span
-                              className="absolute inset-0 h-full w-full bg-neutral-800/[0.8] block rounded-3xl z-10"
-                              layoutId="hoverBackground"
-                              initial={{ opacity: 0 }}
-                              animate={{
-                                opacity: 1,
-                                transition: { duration: 0.15 },
-                              }}
-                              exit={{
-                                opacity: 0,
-                                transition: { duration: 0.15, delay: 0.2 },
-                              }}
-                            />
-                          )}
-                        </AnimatePresence>
-                        <div className={cn(
-                          "tweet-card tweet-container relative z-20 h-full w-full overflow-hidden p-4"
-                        )}>
-                          <Tweet id={id} />
-                        </div>
-                      </div>
-                    </ShineBorder>
-                    <div className="bg-white mix-blend-plus-lighter absolute h-[100px] w-full blur-[50px] right-0 -bottom-20 opacity-10"></div>
+              <div key={index} className="tweet-card-wrapper">
+                <div className="w-[320px] relative overflow-hidden mx-auto rounded-2xl bg-black border border-[#252525]">
+                  {/* Twitter Icon */}
+                  <div className="absolute top-4 right-4 z-30">
+                    <IconBrandX className="w-5 h-5 text-white/60" />
+                  </div>
+                  
+                  {/* Tweet Content */}
+                  <div className="tweet-card tweet-container p-6">
+                    <Tweet id={id} />
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -145,7 +99,6 @@ export default function TweetMarquee() {
         /* Tweet Card */
         .tweet-card {
           width: 100%;
-          padding: 8px;
         }
 
         /* AGGRESSIVE HIDING - Only show profile, username, and tweet text */
@@ -199,7 +152,7 @@ export default function TweetMarquee() {
         .tweet-container article > div {
           display: flex !important;
           flex-direction: row !important;
-          gap: 12px !important;
+          gap: 16px !important;
           padding: 0 !important;
           margin: 0 !important;
         }
@@ -207,8 +160,13 @@ export default function TweetMarquee() {
         .tweet-container article > div > div {
           display: flex !important;
           flex-direction: column !important;
-          gap: 4px !important;
+          gap: 6px !important;
           flex: 1 !important;
+        }
+        
+        /* Add spacing around tweet content */
+        .tweet-container article {
+          padding: 8px 0 !important;
         }
         
         /* Profile picture - Twitter-like size */
@@ -251,6 +209,16 @@ export default function TweetMarquee() {
         .tweet-container [data-testid="copy-link"],
         .tweet-container button,
         .tweet-container a[role="button"] {
+          display: none !important;
+        }
+        
+        /* Hide follow buttons and text */
+        .tweet-container [aria-label*="Follow"],
+        .tweet-container [aria-label*="follow"],
+        .tweet-container button[aria-label*="Follow"],
+        .tweet-container button[aria-label*="follow"],
+        .tweet-container span:contains("Follow"),
+        .tweet-container *:contains("Follow") {
           display: none !important;
         }
         
