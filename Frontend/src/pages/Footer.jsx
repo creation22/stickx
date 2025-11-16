@@ -8,7 +8,7 @@ const Footer = () => {
 
                     {/* Left Section */}
                     <div className="text-center lg:text-left">
-                        <div className="text-lg sm:text-xl font-semibold" style={{ color: '#ffffff', fontFamily: "'Inter Tight', sans-serif" }}>
+                        <div className="text-lg sm:text-xl font-semibold" style={{ color: '#ffffff', fontFamily: "'Playfair Display', serif" }}>
                             StickX
                         </div>
                         <div className="text-xs sm:text-sm" style={{ color: '#e5e5e5' }}>

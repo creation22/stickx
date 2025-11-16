@@ -74,7 +74,7 @@ export const Nav = () => {
                 href={item.link}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="relative"
-                style={{ color: '#e5e5e5', fontFamily: "'Inter', sans-serif" }}>
+                style={{ color: '#e5e5e5', fontFamily: "'Playfair Display', serif" }}>
                 <span className="block">{item.name}</span>
               </a>
             ))}

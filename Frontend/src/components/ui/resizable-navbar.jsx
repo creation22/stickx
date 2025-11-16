@@ -101,7 +101,7 @@ export const NavItems = ({
           }}
           onClick={onItemClick}
           className="relative px-4 py-2"
-          style={{ color: '#e5e5e5', fontFamily: "'Inter', sans-serif" }}
+          style={{ color: '#e5e5e5', fontFamily: "'Playfair Display', serif" }}
           key={`link-${idx}`}
           href={item.link}>
           {hovered === idx && (
@@ -206,7 +206,7 @@ export const NavbarLogo = () => {
         alt="logo"
         width={30}
         height={30} />
-      <span className="font-medium" style={{ color: '#ffffff', fontFamily: "'Inter Tight', sans-serif" }}>StickX</span>
+      <span className="font-medium" style={{ color: '#ffffff', fontFamily: "'Playfair Display', serif" }}>StickX</span>
     </a>
   );
 };

@@ -18,13 +18,13 @@ export default function TweetMarquee() {
 
   return (
     <div className="w-full flex flex-col bg-[#151515]/20 backdrop-blur-xl relative">
-      <div className="py-8 border-b border-[#252525]">
-        <h2 className="text-center text-3xl tracking-tight font-medium text-white">
+      <div className="py-12 px-4 border-b border-[#252525]">
+        <h2 className="text-center text-5xl sm:text-6xl md:text-7xl tracking-tight font-bold text-white" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '1rem' }}>
           Our Top Tweets
         </h2>
       </div>
 
-      <div className="w-full relative border-b border-[#252525] py-10">
+      <div className="w-full relative border-b border-[#252525] py-16">
         <div className="tweet-marquee-wrapper">
           <div className="tweet-marquee">
             {duplicatedTweets.map((id, index) => (
@@ -179,14 +179,14 @@ export default function TweetMarquee() {
           font-weight: 700 !important;
           font-size: 15px !important;
           line-height: 20px !important;
-          font-family: 'Inter', sans-serif !important;
+          font-family: 'Playfair Display', serif !important;
         }
         
         .tweet-container [data-testid="UserName"] {
           color: #8b8b8b !important;
           font-size: 15px !important;
           line-height: 20px !important;
-          font-family: 'Inter', sans-serif !important;
+          font-family: 'Playfair Display', serif !important;
         }
         
         /* Tweet text - Twitter-like styling */
@@ -195,7 +195,7 @@ export default function TweetMarquee() {
           line-height: 20px !important;
           color: #ffffff !important;
           margin-top: 2px !important;
-          font-family: 'Inter', sans-serif !important;
+          font-family: 'Playfair Display', serif !important;
           word-wrap: break-word !important;
         }
         
