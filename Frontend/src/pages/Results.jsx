@@ -9,7 +9,9 @@ export function Results() {
     "https://i.ibb.co/nyhwn11/piyush.jpg",
     "https://i.ibb.co/kgKg0PZt/sapna.jpg",
     "https://i.ibb.co/21pT817y/kirat.jpg",
-    "https://i.ibb.co/7N6HvXtx/chai.jpg"
+    "https://i.ibb.co/7N6HvXtx/chai.jpg" ,
+    "https://i.ibb.co/ycY2P28H/alakh.jpg",
+    "https://i.ibb.co/8ggBjxTY/contri.jpg"
   ];
 
   return (

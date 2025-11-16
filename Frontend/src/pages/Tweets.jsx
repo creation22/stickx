@@ -19,7 +19,15 @@ export default function TweetMarquee() {
   return (
     <div className="w-full flex flex-col bg-[#151515]/20 backdrop-blur-xl relative">
       <div className="py-12 px-4 border-b border-[#252525]">
-        <h2 className="text-center text-5xl sm:text-6xl md:text-7xl tracking-tight font-bold text-white" style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '1rem' }}>
+        <h2
+          className="text-center text-5xl sm:text-6xl md:text-7xl tracking-tight font-bold text-white"
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontWeight: 800,
+            letterSpacing: "-0.02em",
+            marginBottom: "1rem",
+          }}
+        >
           Our Top Tweets
         </h2>
       </div>
@@ -28,17 +36,26 @@ export default function TweetMarquee() {
         <div className="tweet-marquee-wrapper">
           <div className="tweet-marquee">
             {duplicatedTweets.map((id, index) => (
-              <div key={index} className="tweet-card-wrapper">
-                <div className="w-[320px] relative overflow-hidden mx-auto rounded-2xl bg-black border border-[#252525]">
+              <div key={index} className="tweet-card-wrapper group">
+                <div
+                  className="tweet-glass-card w-[320px] mx-auto rounded-2xl bg-black/70 border border-[#252525] shadow-lg
+                  backdrop-blur-xl relative overflow-hidden transition-all duration-300 group-hover:shadow-[0_8px_32px_0_rgba(0,0,0,0.30)]
+                  group-hover:border-[#4c9dfb]/80"
+                  style={{
+                    boxShadow:
+                      "0 4px 16px 0 rgba(30,30,30,0.22), 0 4px 32px 0 rgba(30,30,30,0.11)",
+                  }}
+                >
                   {/* Twitter Icon */}
                   <div className="absolute top-4 right-4 z-30">
                     <IconBrandX className="w-5 h-5 text-white/60" />
                   </div>
-                  
                   {/* Tweet Content */}
                   <div className="tweet-card tweet-container p-6">
                     <Tweet id={id} />
                   </div>
+                  {/* Subtle glow on hover */}
+                  <div className="pointer-events-none absolute inset-0 rounded-2xl group-hover:ring-2 group-hover:ring-[#4c9dfb]/30 transition-all duration-300" />
                 </div>
               </div>
             ))}
@@ -71,16 +88,16 @@ export default function TweetMarquee() {
         /* Marquee Animation */
         .tweet-marquee {
           display: flex;
-          gap: 1.5rem;
+          gap: 2.5rem;
           width: fit-content;
-          animation: marquee-scroll 40s linear infinite;
+          animation: marquee-scroll-2 38s linear infinite;
         }
 
         .tweet-marquee:hover {
           animation-play-state: paused;
         }
 
-        @keyframes marquee-scroll {
+        @keyframes marquee-scroll-2 {
           0% {
             transform: translateX(0);
           }
@@ -96,17 +113,11 @@ export default function TweetMarquee() {
           position: relative;
         }
 
-        /* Tweet Card */
-        .tweet-card {
-          width: 100%;
-        }
-
         /* AGGRESSIVE HIDING - Only show profile, username, and tweet text */
         .tweet-container article {
           padding: 0 !important;
           background: transparent !important;
         }
-        
         /* Hide all engagement metrics and buttons */
         .tweet-container [data-testid="like"],
         .tweet-container [data-testid="reply"],
@@ -125,7 +136,6 @@ export default function TweetMarquee() {
         .tweet-container article > div > div:last-child {
           display: none !important;
         }
-        
         /* Hide timestamp, date, view count, analytics */
         .tweet-container time,
         .tweet-container [data-testid="app-text-transition-container"],
@@ -133,12 +143,10 @@ export default function TweetMarquee() {
         .tweet-container a[aria-label*="·"] {
           display: none !important;
         }
-        
         /* Hide verified badges and other icons except profile */
         .tweet-container svg:not([data-testid="tweet-avatar-image"]) {
           display: none !important;
         }
-        
         /* Hide the "Read more" and external links */
         .tweet-container a[href*="twitter.com"],
         .tweet-container a[href*="x.com"],
@@ -147,7 +155,6 @@ export default function TweetMarquee() {
           color: inherit !important;
           text-decoration: none !important;
         }
-        
         /* Clean up spacing - Make it look like real tweet */
         .tweet-container article > div {
           display: flex !important;
@@ -163,7 +170,7 @@ export default function TweetMarquee() {
           gap: 4px !important;
           flex: 1 !important;
         }
-        
+
         /* Profile picture - Twitter-like size */
         .tweet-container img {
           border-radius: 50% !important;
@@ -172,7 +179,7 @@ export default function TweetMarquee() {
           flex-shrink: 0 !important;
           object-fit: cover !important;
         }
-        
+
         /* User name and handle - Twitter-like styling */
         .tweet-container [data-testid="User-Name"] {
           color: #ffffff !important;
@@ -181,14 +188,14 @@ export default function TweetMarquee() {
           line-height: 20px !important;
           font-family: 'Playfair Display', serif !important;
         }
-        
+
         .tweet-container [data-testid="UserName"] {
           color: #8b8b8b !important;
           font-size: 15px !important;
           line-height: 20px !important;
           font-family: 'Playfair Display', serif !important;
         }
-        
+
         /* Tweet text - Twitter-like styling */
         .tweet-container [data-testid="tweetText"] {
           font-size: 15px !important;
@@ -198,7 +205,7 @@ export default function TweetMarquee() {
           font-family: 'Playfair Display', serif !important;
           word-wrap: break-word !important;
         }
-        
+
         /* Hide "Copy link" and any footer actions */
         .tweet-container [aria-label*="Copy"],
         .tweet-container [data-testid="copy-link"],
@@ -206,12 +213,12 @@ export default function TweetMarquee() {
         .tweet-container a[role="button"] {
           display: none !important;
         }
-        
+
         /* Force black background */
         .tweet-container * {
           background: transparent !important;
         }
-        
+
         .tweet-container article {
           background: transparent !important;
         }
