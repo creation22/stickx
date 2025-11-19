@@ -12,18 +12,22 @@ import {
 } from "../components/ui/resizable-navbar";
 import { useState } from "react";
 import { IconBrandGithub, IconBrandX } from "@tabler/icons-react";
-
+import { Link } from "react-router-dom";
 
 export const Nav = () => {
   const navItems = [
     {
       name: "Home",
-      link: "#home",
+      link: "/",
     },
     {
-      name: "Browse",
-      link: "#browse",
+      name: "Feed",
+      link: "/feed",
     },
+    {
+      name : "Editor",
+      link: "/editor",
+    }
 ,
   ];
 

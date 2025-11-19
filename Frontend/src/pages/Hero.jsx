@@ -1,19 +1,18 @@
 import React from 'react'
-import { Nav } from './Navabar'
 import { Heading } from './Heading'
-
+import AccordionUsage from './Questions.jsx'
+import TweetGrid from './Tweets'
+import { Results } from './Results'
 
 const Hero = () => {
     return (
-        <div>
-            <div className='sticky top-0 z-50'>
-
-            <Nav/>
-            </div>
-            <div className=''>
-            <Heading/>
-            </div>
+        <div className='relative z-10'>
+            <Heading />
+            <Results />
+            <AccordionUsage />
+            <TweetGrid />
         </div>
     )
 }
-export default Hero 
+
+export default Hero
