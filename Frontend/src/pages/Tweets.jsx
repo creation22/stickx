@@ -17,221 +17,158 @@ export default function TweetMarquee() {
   const duplicatedTweets = [...tweets, ...tweets];
 
   return (
-    <div className="w-full flex flex-col bg-[#151515]/20 backdrop-blur-xl relative">
-      <div className="py-12 px-4 border-b border-[#252525]">
+    <div className="w-full flex flex-col relative overflow-hidden bg-black py-20">
+
+      {/* Header */}
+      <div className="pb-10 text-center">
         <h2
           className="text-center text-5xl sm:text-6xl md:text-7xl tracking-tight font-bold text-white"
           style={{
             fontFamily: "'Playfair Display', serif",
             fontWeight: 800,
             letterSpacing: "-0.02em",
-            marginBottom: "1rem",
           }}
         >
-          Our Top Tweets
+          Loved by Everyone
         </h2>
+
+        <p className="text-neutral-400 text-lg mt-4">
+          StickX is already trending across X
+        </p>
       </div>
 
-      <div className="w-full relative border-b border-[#252525] py-16">
-        <div className="tweet-marquee-wrapper">
-          <div className="tweet-marquee">
-            {duplicatedTweets.map((id, index) => (
-              <div key={index} className="tweet-card-wrapper group">
-                <div
-                  className="tweet-glass-card w-[320px] mx-auto rounded-2xl bg-black/70 border border-[#252525] shadow-lg
-                  backdrop-blur-xl relative overflow-hidden transition-all duration-300 group-hover:shadow-[0_8px_32px_0_rgba(0,0,0,0.30)]
-                  group-hover:border-[#4c9dfb]/80"
-                  style={{
-                    boxShadow:
-                      "0 4px 16px 0 rgba(30,30,30,0.22), 0 4px 32px 0 rgba(30,30,30,0.11)",
-                  }}
-                >
-                  {/* Twitter Icon */}
-                  <div className="absolute top-4 right-4 z-30">
-                    <IconBrandX className="w-5 h-5 text-white/60" />
-                  </div>
-                  {/* Tweet Content */}
-                  <div className="tweet-card tweet-container p-6">
-                    <Tweet id={id} />
-                  </div>
-                  {/* Subtle glow on hover */}
-                  <div className="pointer-events-none absolute inset-0 rounded-2xl group-hover:ring-2 group-hover:ring-[#4c9dfb]/30 transition-all duration-300" />
+      {/* BACKGROUND BLOBS */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute w-[500px] h-[500px] bg-[#4c9dfb30] rounded-full blur-[140px] top-20 -left-20"></div>
+        <div className="absolute w-[400px] h-[400px] bg-[#ffb7c530] rounded-full blur-[140px] bottom-20 -right-10"></div>
+        <div className="absolute w-[350px] h-[350px] bg-[#ffffff15] rounded-full blur-[150px] top-1/2 left-1/2 -translate-x-1/2"></div>
+      </div>
+
+      {/* Marquee Container */}
+      <div className="tweet-marquee-wrapper relative mt-10">
+
+        <div className="tweet-marquee">
+          {duplicatedTweets.map((id, i) => (
+            <div key={i} className="tweet-card-container group">
+
+              <div className="tweet-card">
+                <div className="absolute top-3 right-3 opacity-60">
+                  <IconBrandX className="w-4 h-4 text-white/60" />
                 </div>
+                <Tweet id={id} />
               </div>
-            ))}
-          </div>
+
+            </div>
+          ))}
         </div>
+
       </div>
 
+      {/* STYLES */}
       <style jsx global>{`
-        /* Marquee Wrapper */
         .tweet-marquee-wrapper {
           width: 100%;
           overflow: hidden;
-          position: relative;
           mask-image: linear-gradient(
             to right,
             transparent 0%,
-            black 5%,
-            black 95%,
-            transparent 100%
-          );
-          -webkit-mask-image: linear-gradient(
-            to right,
-            transparent 0%,
-            black 5%,
-            black 95%,
+            black 10%,
+            black 90%,
             transparent 100%
           );
         }
 
-        /* Marquee Animation */
         .tweet-marquee {
           display: flex;
-          gap: 2.5rem;
+          gap: 3rem;
           width: fit-content;
-          animation: marquee-scroll-2 38s linear infinite;
+          animation: slickScroll 35s linear infinite;
         }
 
         .tweet-marquee:hover {
           animation-play-state: paused;
         }
 
-        @keyframes marquee-scroll-2 {
-          0% {
+        @keyframes slickScroll {
+          from {
             transform: translateX(0);
           }
-          100% {
+          to {
             transform: translateX(-50%);
           }
         }
 
-        /* Tweet Card Wrapper */
-        .tweet-card-wrapper {
+        /* Tweet card container */
+        .tweet-card-container {
           flex-shrink: 0;
-          width: 320px;
-          position: relative;
+          width: 360px;
         }
 
-        /* AGGRESSIVE HIDING - Only show profile, username, and tweet text */
+        /* Tweet Card Glass UI */
+        .tweet-card {
+          position: relative;
+          backdrop-filter: blur(25px);
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 20px;
+          padding: 20px;
+          overflow: hidden;
+          box-shadow: 0 4px 25px rgba(0, 0, 0, 0.25);
+          transition: all 0.3s ease;
+        }
+
+        .tweet-card:hover {
+          transform: translateY(-4px) scale(1.02);
+          border-color: rgba(100, 150, 255, 0.4);
+          box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+        }
+
+        /* Hide UI pieces from tweets (your sanitizer stays intact) */
         .tweet-container article {
           padding: 0 !important;
           background: transparent !important;
         }
-        /* Hide all engagement metrics and buttons */
         .tweet-container [data-testid="like"],
         .tweet-container [data-testid="reply"],
         .tweet-container [data-testid="retweet"],
         .tweet-container [data-testid="unretweet"],
         .tweet-container [data-testid="bookmark"],
         .tweet-container [data-testid="share"],
-        .tweet-container [aria-label*="Reply"],
-        .tweet-container [aria-label*="Retweet"],
-        .tweet-container [aria-label*="Like"],
-        .tweet-container [aria-label*="Bookmark"],
-        .tweet-container [aria-label*="Share"],
-        .tweet-container [role="group"],
-        .tweet-container div[role="group"],
-        .tweet-container article > div:last-child,
-        .tweet-container article > div > div:last-child {
-          display: none !important;
-        }
-        /* Hide timestamp, date, view count, analytics */
         .tweet-container time,
-        .tweet-container [data-testid="app-text-transition-container"],
-        .tweet-container a[href*="/status/"] > time,
-        .tweet-container a[aria-label*="·"] {
-          display: none !important;
-        }
-        /* Hide verified badges and other icons except profile */
+        .tweet-container [role="group"],
+        .tweet-container a[href*="twitter.com"],
+        .tweet-container a[href*="x.com"],
         .tweet-container svg:not([data-testid="tweet-avatar-image"]) {
           display: none !important;
         }
-        /* Hide the "Read more" and external links */
-        .tweet-container a[href*="twitter.com"],
-        .tweet-container a[href*="x.com"],
-        .tweet-container a[target="_blank"]:not([data-testid="tweet-avatar-link"]) {
-          pointer-events: none;
-          color: inherit !important;
-          text-decoration: none !important;
-        }
-        /* Clean up spacing - Make it look like real tweet */
+
+        /* Layout fixes */
         .tweet-container article > div {
           display: flex !important;
           flex-direction: row !important;
           gap: 12px !important;
-          padding: 0 !important;
-          margin: 0 !important;
         }
 
-        .tweet-container article > div > div {
-          display: flex !important;
-          flex-direction: column !important;
-          gap: 4px !important;
-          flex: 1 !important;
-        }
-
-        /* Profile picture - Twitter-like size */
         .tweet-container img {
           border-radius: 50% !important;
-          width: 40px !important;
-          height: 40px !important;
-          flex-shrink: 0 !important;
-          object-fit: cover !important;
+          width: 42px !important;
+          height: 42px !important;
         }
 
-        /* User name and handle - Twitter-like styling */
         .tweet-container [data-testid="User-Name"] {
-          color: #ffffff !important;
+          color: white !important;
+          font-size: 16px !important;
           font-weight: 700 !important;
-          font-size: 15px !important;
-          line-height: 20px !important;
           font-family: 'Playfair Display', serif !important;
         }
-
         .tweet-container [data-testid="UserName"] {
-          color: #8b8b8b !important;
-          font-size: 15px !important;
-          line-height: 20px !important;
-          font-family: 'Playfair Display', serif !important;
+          color: #888 !important;
         }
 
-        /* Tweet text - Twitter-like styling */
         .tweet-container [data-testid="tweetText"] {
+          color: white !important;
           font-size: 15px !important;
-          line-height: 20px !important;
-          color: #ffffff !important;
-          margin-top: 2px !important;
           font-family: 'Playfair Display', serif !important;
-          word-wrap: break-word !important;
-        }
-
-        /* Hide "Copy link" and any footer actions */
-        .tweet-container [aria-label*="Copy"],
-        .tweet-container [data-testid="copy-link"],
-        .tweet-container button,
-        .tweet-container a[role="button"] {
-          display: none !important;
-        }
-
-        /* Force black background */
-        .tweet-container * {
-          background: transparent !important;
-        }
-
-        .tweet-container article {
-          background: transparent !important;
-        }
-
-        /* Ensure proper text colors */
-        .tweet-container {
-          color: #ffffff !important;
-        }
-
-        /* Override for specific elements that should be gray */
-        .tweet-container [data-testid="UserName"],
-        .tweet-container span[style*="color"] {
-          color: #8b8b8b !important;
         }
       `}</style>
     </div>

@@ -1,8 +1,8 @@
 "use client";
 import { cn } from "../../lib/utils";
 import { motion } from "motion/react";
-import React from "react";
-
+import React  , {useState}from "react";
+import { useNavigate } from "react-router-dom";
 const transition = {
   duration: 0,
   ease: "linear",
@@ -14,6 +14,16 @@ export const GoogleGeminiEffect = ({
   description,
   className
 }) => {
+    const navigate = useNavigate();
+  const [isClicked, setIsClicked] = useState(false);
+
+  // When button is clicked → animate → then go to /feed
+  const handleClick = () => {
+    setIsClicked(true);
+    setTimeout(() => {
+      navigate("/feed");
+    }, 200); // matches animation duration
+  };
   return (
     <div className={cn("sticky top-60", className)}>
       <p
@@ -25,13 +35,20 @@ export const GoogleGeminiEffect = ({
         {description ||
           `Trending, viral, and custom stickers for X  post or create your own`}
       </p>
-      <div
-        className="w-full h-[890px] -top-60 md:-top-40  flex items-center justify-center bg-red-transparent absolute ">
-        <button
-          className="font-bold bg-white rounded-full md:px-4 md:py-2 px-2 py-1 md:mt-24 mt-8 z-30 md:text-base text-black text-xs  w-fit mx-auto ">
-          Get Started 
-        </button>
+          <div className="w-full h-[890px] -top-60 md:-top-40 flex items-center justify-center absolute">
+        <motion.button
+          onClick={handleClick}
+          animate={isClicked ? { scale: 0.85 } : { scale: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          className="font-bold bg-white rounded-full md:px-4 md:py-2 px-2 py-1 
+                     md:mt-24 mt-8 z-30 md:text-base text-black text-xs 
+                     w-fit mx-auto shadow-md hover:shadow-lg active:scale-95 
+                     transition-transform"
+        >
+          Get Started
+        </motion.button>
       </div>
+
       <svg
         width="1440"
         height="890"
