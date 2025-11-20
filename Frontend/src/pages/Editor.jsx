@@ -279,7 +279,8 @@ const ImageElement = ({ shapeProps, isSelected, onSelect, onChange }) => {
    =========================== */
 export default function StickerEditorModern() {
   const [params] = useSearchParams();
-  const incomingImage = params.get("img");
+ const incomingImage = params.get("template");
+
 
   const stageRef = useRef();
   const fileInputRef = useRef();

@@ -1,27 +1,32 @@
 import { useEffect, useState } from "react";
-import { HoverEffect } from "../components/ui/card-hover-effect";
-import { InteractiveHoverButton } from "../components/ui/interactive-hover-button";
 
 export function Feed() {
   const [stickers, setStickers] = useState([]);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  const ITEMS_PER_PAGE = 28;
 
   useEffect(() => {
     async function fetchStickers() {
       const res = await fetch("http://localhost:5000/api/stickers");
       const data = await res.json();
-
-      // Transform to HoverEffect-friendly format
-      const formatted = data.map(item => ({
-        title: "",                // not needed
-        description: "",          // not needed
-        link: item.imageUrl       // this is your Cloudinary URL
-      }));
-
-      setStickers(formatted);
+      setStickers(data);
     }
 
     fetchStickers();
   }, []);
+
+  // SEARCH FILTER
+  const filtered = stickers.filter((s) =>
+    s.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // PAGINATION
+  const startIndex = (page - 1) * ITEMS_PER_PAGE;
+  const paginated = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
 
   return (
     <div className="py-10 space-y-12">
@@ -32,17 +37,83 @@ export function Feed() {
 
         <p className="text-center mt-4 text-zinc-400 max-w-2xl mx-auto px-4">
           Explore a curated selection of trending stickers—from the latest memes to viral moments.
-          Post them instantly on X, or create your own with one click.
         </p>
 
-        <div className="flex justify-center items-center text-black mt-20">
-          <InteractiveHoverButton>Create Your Own Stickers</InteractiveHoverButton>
+        {/* Create Btn */}
+        <div className="flex justify-center items-center mt-10">
+          <button
+            className="px-6 py-3 text-lg font-semibold bg-white text-black rounded-xl shadow-lg hover:scale-105 transition"
+            onClick={() => (window.location.href = "/editor")}
+          >
+            Create Your Own Stickers
+          </button>
+        </div>
+
+        {/* SEARCH BAR */}
+        <div className="flex justify-center mt-8 px-4">
+          <input
+            type="text"
+            placeholder="Search stickers..."
+            className="w-full max-w-md px-4 py-2 rounded-lg bg-zinc-800 text-white border border-zinc-700 focus:outline-none"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+          />
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-8">
-        {/* Stickers appear dynamically */}
-        <HoverEffect items={stickers} />
+      {/* STICKER GRID */}
+      <div className="max-w-6xl mx-auto px-8 grid grid-cols-2 md:grid-cols-4 gap-8">
+        {paginated.map((item) => (
+          <div
+            key={item._id}
+            className="cursor-pointer group"
+            onClick={() =>
+              (window.location.href = `/editor?template=${encodeURIComponent(
+                item.imageUrl
+              )}`)
+            }
+          >
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 shadow transition">
+              <img
+                src={item.imageUrl}
+                className="rounded-lg w-full object-contain"
+                alt={item.title}
+              />
+            </div>
+
+            <div className="text-white font-semibold mt-2 text-sm text-center">
+              {item.title}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* PAGINATION CONTROLS */}
+      <div className="flex justify-center gap-4 mt-10">
+        <button
+          disabled={page === 1}
+          onClick={() => setPage((p) => p - 1)}
+          className={`px-4 py-2 rounded-lg border border-zinc-700 text-white ${
+            page === 1 ? "opacity-30 cursor-not-allowed" : "hover:bg-zinc-800"
+          }`}
+        >
+          Prev
+        </button>
+
+        <button
+          disabled={page === totalPages}
+          onClick={() => setPage((p) => p + 1)}
+          className={`px-4 py-2 rounded-lg border border-zinc-700 text-white ${
+            page === totalPages
+              ? "opacity-30 cursor-not-allowed"
+              : "hover:bg-zinc-800"
+          }`}
+        >
+          Next
+        </button>
       </div>
     </div>
   );
