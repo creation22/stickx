@@ -7,15 +7,21 @@ export function Feed() {
 
   const ITEMS_PER_PAGE = 28;
 
+  const API = import.meta.env.VITE_API_URL; // <— USE ENV
+
   useEffect(() => {
     async function fetchStickers() {
-      const res = await fetch("http://localhost:5000/api/stickers");
-      const data = await res.json();
-      setStickers(data);
+      try {
+        const res = await fetch(`${API}/api/stickers`);
+        const data = await res.json();
+        setStickers(data);
+      } catch (err) {
+        console.error("Error loading stickers:", err);
+      }
     }
 
     fetchStickers();
-  }, []);
+  }, [API]);
 
   // SEARCH FILTER
   const filtered = stickers.filter((s) =>
@@ -36,7 +42,8 @@ export function Feed() {
         </h1>
 
         <p className="text-center mt-4 text-zinc-400 max-w-2xl mx-auto px-4">
-          Explore a curated selection of trending stickers—from the latest memes to viral moments.
+          Explore a curated selection of trending stickers—from the latest memes
+          to viral moments.
         </p>
 
         {/* Create Btn */}
@@ -77,15 +84,14 @@ export function Feed() {
             }
           >
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 shadow transition">
-  <div className="w-full h-40 md:h-48 flex items-center justify-center overflow-hidden rounded-lg bg-zinc-950">
-    <img
-      src={item.imageUrl}
-      alt={item.title}
-      className="object-contain max-h-full max-w-full"
-    />
-  </div>
-</div>
-
+              <div className="w-full h-40 md:h-48 flex items-center justify-center overflow-hidden rounded-lg bg-zinc-950">
+                <img
+                  src={item.imageUrl}
+                  alt={item.title}
+                  className="object-contain max-h-full max-w-full"
+                />
+              </div>
+            </div>
 
             <div className="text-white font-semibold mt-2 text-sm text-center">
               {item.title}

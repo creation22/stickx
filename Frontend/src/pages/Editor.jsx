@@ -722,7 +722,7 @@ export default function StickerEditorModern() {
       {/* HEADER */}
       <header className="h-16 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between px-4 z-20 shrink-0">
         <div className="flex items-center gap-4">
-            <div className="font-bold text-xl tracking-tight hidden md:block bg-gradient-to-r from-neutral-100 to-neutral-300 bg-clip-text text-transparent">
+            <div className="font-bold text-xl tracking-tight hidden md:block bg-linear-to-r from-neutral-100 to-neutral-300 bg-clip-text text-transparent">
                 StickerStudio
             </div>
             <div className="h-6 w-px bg-neutral-700 hidden md:block"></div>
