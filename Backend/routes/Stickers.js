@@ -1,22 +1,17 @@
 import express from "express";
 import multer from "multer";
-import { uploadSticker } from "../controllers/stickerController.js";
 import Sticker from "../models/Sticker.js";
-import cloudinary from "cloudinary";
+import cloudinary from "../utils/cloudinary.js";
 import fs from "fs";
 
 const router = express.Router();
-
-const PENDING_FILE = "data/pending.json";
 
 /* -----------------------
    MULTER CONFIG
 ------------------------ */
 const upload = multer({
   dest: "uploads/",
-  limits: {
-    fileSize: 5 * 1024 * 1024,
-  },
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (!file.mimetype.startsWith("image/")) {
       return cb(new Error("Only image files are allowed!"), false);
@@ -26,12 +21,7 @@ const upload = multer({
 });
 
 /* -----------------------
-   USER UPLOAD (NO DB SAVE)
------------------------- */
-router.post("/upload", upload.single("file"), uploadSticker);
-
-/* -----------------------
-   FEED (REAL MONGODB)
+   FEED - FETCH FROM DB
 ------------------------ */
 router.get("/", async (req, res) => {
   try {
@@ -47,6 +37,9 @@ router.get("/", async (req, res) => {
    SAVE USER EXPORTED STICKER → pending.json (NO DB)
    POST /api/stickers/pending
 ----------------------------------------------------- */
+
+const PENDING_FILE = "pending.json";
+
 router.post("/pending", (req, res) => {
   try {
     const { imageUrl } = req.body;
@@ -55,7 +48,6 @@ router.post("/pending", (req, res) => {
       return res.status(400).json({ error: "imageUrl missing" });
     }
 
-    // Load existing json file or create empty list
     let pending = [];
     if (fs.existsSync(PENDING_FILE)) {
       pending = JSON.parse(fs.readFileSync(PENDING_FILE, "utf8"));
@@ -76,24 +68,44 @@ router.post("/pending", (req, res) => {
 });
 
 /* -----------------------
-   ADMIN ADD STICKER (SAVE TO DB)
+   ADMIN ADD STICKER
+   Save to DB — title, category, tags, image
 ------------------------ */
+
 router.post("/admin/add", upload.single("file"), async (req, res) => {
   try {
+    const { title, category, tags } = req.body;
+
+    // Validate required fields
+    if (!title || !category) {
+      return res
+        .status(400)
+        .json({ error: "Title and category are required" });
+    }
+
     if (!req.file) {
       return res.status(400).json({ error: "Image file missing" });
     }
 
-    // Upload to Cloudinary
+    // Upload to Cloudinary WITH BG REMOVAL + OUTLINE
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: "stickers/feed",
+      transformation: [
+        { effect: "background_removal" },     // Remove BG
+        { effect: "outline", color: "white" }, // White outline
+        { crop: "pad", background: "black" },  // Black background behind cutout
+        { fetch_format: "png", quality: "100"} // HD PNG
+      ]
     });
 
-    // Remove local file
+    // Remove local uploaded file
     fs.unlinkSync(req.file.path);
 
     // Save to MongoDB
     const newSticker = await Sticker.create({
+      title,
+      category,
+      tags: tags ? tags.split(",") : [],
       imageUrl: result.secure_url,
     });
 
@@ -106,5 +118,6 @@ router.post("/admin/add", upload.single("file"), async (req, res) => {
     return res.status(500).json({ error: "Failed to save admin sticker" });
   }
 });
+
 
 export default router;

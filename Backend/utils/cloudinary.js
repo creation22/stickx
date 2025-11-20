@@ -1,16 +1,11 @@
 import { v2 as cloudinary } from "cloudinary";
 import dotenv from "dotenv";
+dotenv.config();
 
-dotenv.config(); 
-if (process.env.CLOUDINARY_URL) {
-  cloudinary.config({ secure: true }); 
-} else {
-  cloudinary.config({
-    cloud_name: process.env.CLOUD_NAME,
-    api_key: process.env.CLOUD_KEY,
-    api_secret: process.env.CLOUD_SECRET,
-    secure: true,
-  });
-}
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export default cloudinary;
