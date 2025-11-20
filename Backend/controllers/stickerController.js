@@ -8,33 +8,9 @@ export const uploadSticker = async (req, res) => {
     if (!file) return res.status(400).json({ error: "No file uploaded" });
 
     const result = await cloudinary.uploader.upload(file.path, {
-      folder: "stickers",
-      transformation: [
-        // 1. Remove background
-        { effect: "background_removal" },
+  folder: "stickers",
+});
 
-        // 2. Add white outline around the subject
-        {
-          effect: "outline",
-          color: "white",
-          
-        },
-
-        // 3. Add black background behind the cutout
-        {
-          crop: "pad",
-          background: "black"
-        },
-
-        // 4. Output HD PNG
-        {
-          fetch_format: "png",
-          quality: "100"
-        }
-      ]
-
-
-    });
 
     const sticker = await Sticker.create({
       imageUrl: result.secure_url

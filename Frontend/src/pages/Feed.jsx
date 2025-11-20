@@ -42,7 +42,7 @@ export function Feed() {
         {/* Create Btn */}
         <div className="flex justify-center items-center mt-10">
           <button
-            className="px-6 py-3 text-lg font-semibold bg-white text-black rounded-xl shadow-lg hover:scale-105 transition"
+            className="px-6 py-3 text-lg font-bold bg-white text-black rounded-xl shadow-lg hover:scale-105 transition"
             onClick={() => (window.location.href = "/editor")}
           >
             Create Your Own Stickers
@@ -77,12 +77,15 @@ export function Feed() {
             }
           >
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 shadow transition">
-              <img
-                src={item.imageUrl}
-                className="rounded-lg w-full object-contain"
-                alt={item.title}
-              />
-            </div>
+  <div className="w-full h-40 md:h-48 flex items-center justify-center overflow-hidden rounded-lg bg-zinc-950">
+    <img
+      src={item.imageUrl}
+      alt={item.title}
+      className="object-contain max-h-full max-w-full"
+    />
+  </div>
+</div>
+
 
             <div className="text-white font-semibold mt-2 text-sm text-center">
               {item.title}

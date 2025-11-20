@@ -87,15 +87,9 @@ router.post("/admin/add", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "Image file missing" });
     }
 
-    // Upload to Cloudinary WITH BG REMOVAL + OUTLINE
+    // Upload to Cloudinary WITHOUT background removal
     const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: "stickers/feed",
-      transformation: [
-        { effect: "background_removal" },     // Remove BG
-        { effect: "outline", color: "white" }, // White outline
-        { crop: "pad", background: "black" },  // Black background behind cutout
-        { fetch_format: "png", quality: "100"} // HD PNG
-      ]
+      folder: "stickers/feed"
     });
 
     // Remove local uploaded file
@@ -118,6 +112,7 @@ router.post("/admin/add", upload.single("file"), async (req, res) => {
     return res.status(500).json({ error: "Failed to save admin sticker" });
   }
 });
+
 
 
 export default router;
