@@ -1,25 +1,6 @@
-// StickerEditorModern.jsx
-// Complete, ready-to-drop React component file.
-// Features included:
-// - Konva editor (text + images)
-// - RGB color picker
-// - Text align (left/center/right) + Bold toggle
-// - Deselect when clicking/touching background
-// - Mobile responsive drawer (elements/properties/background)
-// - Export modal (styled to match dark theme) asking permission to submit to pending.json
-// - If user agrees, sends POST to /api/stickers/pending with { imageUrl: uri }
-// - Editor uploads (file -> /api/stickers/upload) remain unchanged (they return imageUrl only)
-// - No MongoDB interaction from editor
-//
-// Notes:
-// - Uses Tailwind classes for styling. Ensure Tailwind is configured in your project.
-// - Assumes backend route POST /api/stickers/pending accepts { imageUrl } (base64 data URL or remote URL).
-// - Keep Cloudinary/upload backend as previously arranged.
-// - You can tweak endpoints/URLs to match production.
-//
-// Author: Generated for your project
+import { useSearchParams } from "react-router-dom";
 import React, { useState, useRef, useEffect } from "react";
-import { Stage, Layer, Image as KImage, Text, Rect, Transformer } from "react-konva";
+import { Stage, Layer, Image as KImage, Text, Rect, Transformer, Label, Tag } from "react-konva";
 import useImage from "use-image";
 import Konva from "konva";
 import {
@@ -37,12 +18,12 @@ import {
   AlignCenter,
   AlignRight,
   Bold,
+  Copy, // Added Copy icon
 } from "lucide-react";
 
 /* ===========================
-   Constants & Helpers
+   Helpers
    =========================== */
-
 const AVAILABLE_FONTS = [
   "Arial",
   "Inter",
@@ -77,14 +58,31 @@ const hexToRgb = (hex) => {
 /* ===========================
    Transformer wrapper
    =========================== */
-const TransformerWrapper = ({ selectedShapeRef, trRef }) => {
+const TransformerWrapper = ({ selectedShapeRef, trRef, isText }) => {
   useEffect(() => {
     if (trRef.current && selectedShapeRef.current) {
       trRef.current.nodes([selectedShapeRef.current]);
       trRef.current.getLayer().batchDraw();
     }
   }, [selectedShapeRef, trRef]);
-  return <Transformer ref={trRef} />;
+
+  return (
+    <Transformer 
+      ref={trRef} 
+      boundBoxFunc={(oldBox, newBox) => {
+        // LIMIT: Don't let width/height drop below 5px
+        if (newBox.width < 5 || newBox.height < 5) {
+          return oldBox;
+        }
+        return newBox;
+      }}
+      enabledAnchors={
+        isText 
+        ? ["top-left", "top-right", "bottom-left", "bottom-right", "middle-left", "middle-right"] 
+        : ["top-left", "top-right", "bottom-left", "bottom-right"]
+      }
+    />
+  );
 };
 
 /* ===========================
@@ -99,7 +97,7 @@ const RgbPicker = ({ rgb, onChange }) => {
           type="color"
           value={hex}
           onChange={(e) => onChange(hexToRgb(e.target.value))}
-          className="w-10 h-10 p-0 border-0 rounded"
+          className="w-10 h-10 p-0 border-0 rounded cursor-pointer bg-transparent"
           aria-label="color"
         />
         <div className="text-sm">{rgbToCss(rgb)}</div>
@@ -145,9 +143,9 @@ const RgbPicker = ({ rgb, onChange }) => {
 };
 
 /* ===========================
-   TextElement component
+   TextElement (Refactored for Label/Tag)
    =========================== */
-const TextElement = ({ shapeProps, isSelected, onSelect, onChange }) => {
+const TextElement = ({ shapeProps, isSelected, onSelect, onChange, onDblClick, isEditing }) => {
   const shapeRef = useRef();
   const trRef = useRef();
 
@@ -158,64 +156,70 @@ const TextElement = ({ shapeProps, isSelected, onSelect, onChange }) => {
     }
   }, [isSelected]);
 
-  const height = shapeProps.height ?? Math.max(40, Math.round(shapeProps.fontSize * 1.4));
+  // If editing inline, hide the canvas text so we don't see double
+  if (isEditing) return null;
 
   return (
     <>
-      {shapeProps.textBg && (
-        <Rect
-          x={shapeProps.x - (shapeProps.padding ?? 10)}
-          y={shapeProps.y - (shapeProps.padding ?? 10)}
-          width={(shapeProps.width ?? 200) + 2 * (shapeProps.padding ?? 10)}
-          height={height + 2 * (shapeProps.padding ?? 10)}
-          fill={rgbToCss(shapeProps.textBgRgb ?? { r: 0, g: 0, b: 0 })}
-          opacity={shapeProps.textBgOpacity ?? 0.6}
-          cornerRadius={6}
-          listening={false}
-          name="background-helper"
-        />
-      )}
-
-      <Text
+      <Label
         ref={shapeRef}
         {...shapeProps}
-        fill={rgbToCss(shapeProps.fillRgb ?? { r: 255, g: 255, b: 255 })}
-        fontStyle={shapeProps.fontStyle ?? "normal"}
-        align={shapeProps.align ?? "left"}
         draggable
-        padding={shapeProps.padding ?? 10}
-        height={height}
         onClick={onSelect}
         onTap={onSelect}
+        onDblClick={onDblClick}
         onDragEnd={(e) => onChange({ ...shapeProps, x: e.target.x(), y: e.target.y() })}
         onTransformEnd={() => {
           const node = shapeRef.current;
           const scaleX = node.scaleX();
           const scaleY = node.scaleY();
+          
+          // Reset scale so stroke/shadows don't get distorted
           node.scaleX(1);
           node.scaleY(1);
+          
           onChange({
             ...shapeProps,
             x: node.x(),
             y: node.y(),
-            width: Math.max(20, node.width() * scaleX),
-            height: Math.max(20, node.height() * scaleY),
-            fontSize: Math.max(5, Math.round(shapeProps.fontSize * scaleY)),
             rotation: Math.round(node.rotation()),
+            // Update fontSize based on scale to actually "resize" text
+            fontSize: Math.max(5, Math.round(shapeProps.fontSize * scaleY)),
+            // Update width for wrapping
+            width: Math.max(20, node.width() * scaleX),
           });
         }}
-        shadowColor={shapeProps.outline ? "#ffffff" : undefined}
-        shadowBlur={shapeProps.shadowBlur ?? 0}
-        shadowOpacity={shapeProps.outline ? shapeProps.shadowOpacity ?? 1 : 0}
-      />
+      >
+        {/* The Tag is the background that auto-sizes */}
+        <Tag
+            fill={shapeProps.textBg ? rgbToCss(shapeProps.textBgRgb) : undefined}
+            opacity={shapeProps.textBg ? shapeProps.textBgOpacity : 0}
+            cornerRadius={6}
+            // pointerEvents="none" 
+            listening={false} // Important: let clicks pass to the text
+        />
+        <Text
+          text={shapeProps.text}
+          fill={rgbToCss(shapeProps.fillRgb ?? { r: 255, g: 255, b: 255 })}
+          fontSize={shapeProps.fontSize}
+          fontFamily={shapeProps.fontFamily}
+          fontStyle={shapeProps.fontStyle}
+          align={shapeProps.align}
+          width={shapeProps.width}
+          padding={shapeProps.padding ?? 10}
+          shadowColor={shapeProps.outline ? "#ffffff" : undefined}
+          shadowBlur={shapeProps.shadowBlur ?? 0}
+          shadowOpacity={shapeProps.outline ? shapeProps.shadowOpacity ?? 1 : 0}
+        />
+      </Label>
 
-      {isSelected && <TransformerWrapper selectedShapeRef={shapeRef} trRef={trRef} />}
+      {isSelected && <TransformerWrapper selectedShapeRef={shapeRef} trRef={trRef} isText={true} />}
     </>
   );
 };
 
 /* ===========================
-   ImageElement component
+   ImageElement
    =========================== */
 const ImageElement = ({ shapeProps, isSelected, onSelect, onChange }) => {
   const shapeRef = useRef();
@@ -231,9 +235,6 @@ const ImageElement = ({ shapeProps, isSelected, onSelect, onChange }) => {
 
   if (!img) return null;
 
-  const useRGBAFilter = !!shapeProps.tintRgb;
-  const filters = useRGBAFilter ? [Konva.Filters.RGBA] : [];
-
   return (
     <>
       <KImage
@@ -243,21 +244,22 @@ const ImageElement = ({ shapeProps, isSelected, onSelect, onChange }) => {
         ref={shapeRef}
         {...shapeProps}
         draggable
-        filters={filters}
-        red={useRGBAFilter ? shapeProps.tintRgb.r : undefined}
-        green={useRGBAFilter ? shapeProps.tintRgb.g : undefined}
-        blue={useRGBAFilter ? shapeProps.tintRgb.b : undefined}
+        // Removed filters/tint props here as requested
         onDragEnd={(e) => onChange({ ...shapeProps, x: e.target.x(), y: e.target.y() })}
         onTransformEnd={() => {
           const node = shapeRef.current;
           const scaleX = node.scaleX();
           const scaleY = node.scaleY();
+          
+          // Reset scale to keep quality
           node.scaleX(1);
           node.scaleY(1);
+          
           onChange({
             ...shapeProps,
             x: node.x(),
             y: node.y(),
+            // Actually apply the new dimensions
             width: Math.max(5, Math.round(node.width() * scaleX)),
             height: Math.max(5, Math.round(node.height() * scaleY)),
             rotation: Math.round(node.rotation()),
@@ -267,7 +269,7 @@ const ImageElement = ({ shapeProps, isSelected, onSelect, onChange }) => {
         shadowBlur={shapeProps.shadowBlur ?? 0}
         shadowOpacity={shapeProps.outline ? shapeProps.shadowOpacity ?? 1 : 0}
       />
-      {isSelected && <TransformerWrapper selectedShapeRef={shapeRef} trRef={trRef} />}
+      {isSelected && <TransformerWrapper selectedShapeRef={shapeRef} trRef={trRef} isText={false} />}
     </>
   );
 };
@@ -275,10 +277,13 @@ const ImageElement = ({ shapeProps, isSelected, onSelect, onChange }) => {
 /* ===========================
    Main Component
    =========================== */
-
 export default function StickerEditorModern() {
+  const [params] = useSearchParams();
+  const incomingImage = params.get("img");
+
   const stageRef = useRef();
   const fileInputRef = useRef();
+  const canvasContainerRef = useRef(); // To position the inline text editor
 
   // Background
   const [bgType, setBgType] = useState("solid"); // solid | transparent | image
@@ -289,6 +294,8 @@ export default function StickerEditorModern() {
   // Elements & selection
   const [elements, setElements] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const [editingId, setEditingId] = useState(null); // For inline text editing
+
   const selectedElement = elements.find((e) => e.id === selectedId) || null;
 
   // UI state
@@ -302,11 +309,6 @@ export default function StickerEditorModern() {
   // Canvas size responsive
   const defaultCanvasSize = 800;
   const [canvasSize, setCanvasSize] = useState(defaultCanvasSize);
-
-  // Export modal state
-  const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [exportingUri, setExportingUri] = useState(null);
-  const [submittingPending, setSubmittingPending] = useState(false);
 
   // Responsive: adjust canvas on resize
   useEffect(() => {
@@ -331,17 +333,15 @@ export default function StickerEditorModern() {
   /* -------------------------
      Element actions
      ------------------------- */
-
   const addText = () => {
     const id = `text-${Date.now()}`;
     const newText = {
       id,
       type: "text",
-      text: "New text",
+      text: "Double click to edit", // Changed default text
       x: 200,
       y: 200,
       fontSize: 36,
-      fill: "rgb(255,255,255)",
       fillRgb: { r: 255, g: 255, b: 255 },
       fontFamily: "Arial",
       align: "left",
@@ -349,7 +349,6 @@ export default function StickerEditorModern() {
       rotation: 0,
       opacity: 1,
       width: 300,
-      height: 60,
       padding: 10,
       textBg: false,
       textBgRgb: { r: 0, g: 0, b: 0 },
@@ -360,6 +359,7 @@ export default function StickerEditorModern() {
     };
     setElements((s) => [...s, newText]);
     setSelectedId(id);
+    setEditingId(null);
     if (window.innerWidth < 640) {
       setDrawerOpen(true);
       setDrawerTab("properties");
@@ -378,18 +378,42 @@ export default function StickerEditorModern() {
       height: h,
       rotation: 0,
       opacity: 1,
-      outline: true,
+      outline: true, // Default outline on
       shadowBlur: 18,
       shadowOpacity: 1,
-      tintRgb: { r: 255, g: 255, b: 255 },
+      // tintRgb removed
     };
     setElements((s) => [...s, newImg]);
     setSelectedId(id);
+    setEditingId(null);
     if (window.innerWidth < 640) {
       setDrawerOpen(true);
       setDrawerTab("properties");
     }
   };
+
+  // ⭐ incomingImage effect
+  useEffect(() => {
+    if (!incomingImage) return;
+
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = incomingImage;
+
+      img.onload = () => {
+        const max = 600; 
+        const scale = Math.min(max / img.width, max / img.height, 1);
+        addImage(incomingImage, Math.round(img.width * scale), Math.round(img.height * scale));
+      };
+
+      img.onerror = () => {
+        addImage(incomingImage, 300, 300);
+      };
+    } catch (e) {
+      console.error("incomingImage load failed", e);
+    }
+  }, [incomingImage]);
 
   const updateElement = (id, changes) => {
     setElements((s) => s.map((el) => (el.id === id ? { ...el, ...changes } : el)));
@@ -403,37 +427,27 @@ export default function StickerEditorModern() {
   /* -------------------------
      Upload handlers
      ------------------------- */
-
   const handleFile = async (file) => {
     if (!file) return;
     setIsUploading(true);
     setLoadingMessage("Uploading...");
 
     try {
-      const form = new FormData();
-      form.append("file", file);
-
-      const res = await fetch("http://localhost:5000/api/stickers/upload", {
-        method: "POST",
-        body: form,
-      });
-
-      const data = await res.json();
-      if (!data.imageUrl) throw new Error("Invalid server response");
-
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        const scale = Math.min(600 / img.width, 600 / img.height, 1);
-        addImage(data.imageUrl, Math.round(img.width * scale), Math.round(img.height * scale));
-        setIsUploading(false);
-        setLoadingMessage("");
-      };
-      img.src = data.imageUrl;
+      // Local File Reader fallback (faster than server)
+      const reader = new FileReader();
+      reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const scale = Math.min(600 / img.width, 600 / img.height, 1);
+            addImage(e.target.result, Math.round(img.width * scale), Math.round(img.height * scale));
+            setIsUploading(false);
+          };
+          img.src = e.target.result;
+      }
+      reader.readAsDataURL(file);
     } catch (err) {
-      alert(err.message || "Upload failed");
+      alert("Upload failed");
       setIsUploading(false);
-      setLoadingMessage("");
     }
   };
 
@@ -451,75 +465,102 @@ export default function StickerEditorModern() {
   };
 
   /* -------------------------
-     Export logic (modal based)
+     Export utilities (Download & Copy)
      ------------------------- */
-
-  const prepareExport = () => {
+  const downloadCanvasPNG = (fileName = "sticker.png") => {
     const stage = stageRef.current;
     if (!stage) return;
+    
+    // Deselect to hide transformer
+    setSelectedId(null);
+    setEditingId(null);
 
-    // Hide transformers
-    const transformers = stage.find("Transformer");
-    transformers.forEach((tr) => tr.visible(false));
-    stage.draw();
-
-    // Export PNG data URL
-    const uri = stage.toDataURL({
-      pixelRatio: 3,
-      quality: 1,
-      mimeType: "image/png",
-    });
-
-    // Re-show transformers
-    transformers.forEach((tr) => tr.visible(true));
-    stage.draw();
-
-    // Trigger download immediately
-    const a = document.createElement("a");
-    a.href = uri;
-    a.download = "sticker.png";
-    a.click();
-
-    // Open modal to ask user
-    setExportingUri(uri);
-    setExportModalOpen(true);
+    // Small timeout to ensure React state updates before drawing
+    setTimeout(() => {
+        const uri = stage.toDataURL({ pixelRatio: 3, quality: 1, mimeType: "image/png" });
+        const a = document.createElement("a");
+        a.href = uri;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }, 50);
   };
 
-  const submitPending = async () => {
-    if (!exportingUri) return;
-    setSubmittingPending(true);
-    try {
-      const res = await fetch("http://localhost:5000/api/stickers/pending", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: exportingUri }),
-      });
-      if (!res.ok) throw new Error("Failed to submit");
-      // success
-      setExportModalOpen(false);
-      setExportingUri(null);
-      alert("Thanks — your sticker was submitted for review!");
-    } catch (err) {
-      console.error(err);
-      alert("Submission failed. Please try again later.");
-    } finally {
-      setSubmittingPending(false);
-    }
+  // COPY FUNCTION RESTORED
+  const copyCanvasToClipboard = async () => {
+    const stage = stageRef.current;
+    if (!stage) return false;
+
+    setSelectedId(null);
+    setEditingId(null);
+
+    setTimeout(async () => {
+        const uri = stage.toDataURL({ pixelRatio: 3, quality: 1, mimeType: "image/png" });
+        try {
+            const res = await fetch(uri);
+            const blob = await res.blob();
+            if (navigator.clipboard && window.ClipboardItem) {
+                await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+                alert("Image copied to clipboard!");
+            } else {
+                alert("Clipboard API not supported");
+            }
+        } catch (e) {
+            console.error("copy failed", e);
+        }
+    }, 50);
   };
 
-  const cancelPending = () => {
-    setExportModalOpen(false);
-    setExportingUri(null);
+  /* -------------------------
+     Inline Editor Renderer
+     ------------------------- */
+  const renderInlineEditor = () => {
+    if (!editingId) return null;
+    const el = elements.find(e => e.id === editingId);
+    if (!el) return null;
+
+    const style = {
+        position: 'absolute',
+        top: `${el.y}px`,
+        left: `${el.x}px`,
+        width: `${el.width}px`,
+        fontSize: `${el.fontSize}px`,
+        fontFamily: el.fontFamily,
+        color: rgbToCss(el.fillRgb),
+        textAlign: el.align,
+        background: 'transparent',
+        border: 'none',
+        outline: '1px dashed white',
+        resize: 'none',
+        overflow: 'hidden',
+        padding: `${el.padding}px`,
+        lineHeight: 1,
+        transform: `rotate(${el.rotation}deg)`,
+        transformOrigin: 'top left',
+        zIndex: 100
+    };
+
+    return (
+        <textarea
+            value={el.text}
+            onChange={(e) => updateElement(editingId, { text: e.target.value })}
+            onBlur={() => setEditingId(null)}
+            onKeyDown={(e) => e.stopPropagation()} // Stop Konva shortcuts
+            autoFocus
+            style={style}
+            rows={Math.max(1, el.text.split('\n').length)}
+        />
+    );
   };
 
   /* -------------------------
      Render
      ------------------------- */
-
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-6">
       {/* TOP BAR */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <label className="inline-flex items-center gap-2 bg-neutral-800 px-3 py-2 rounded-lg cursor-pointer">
           <Upload size={16} />
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileInput} className="hidden" />
@@ -536,8 +577,22 @@ export default function StickerEditorModern() {
         <label className="inline-flex items-center gap-2 bg-neutral-800 px-3 py-2 rounded-lg cursor-pointer">
           <ImageIcon size={16} />
           <input type="file" accept="image/*" onChange={handleBgFile} className="hidden" />
-          <span className="text-sm">Background Image</span>
+          <span className="text-sm">BG Image</span>
         </label>
+
+        {/* NEW: Background Color Slider (Top Bar) */}
+        <div className="flex items-center gap-2 bg-neutral-900 px-2 py-1 rounded border border-neutral-700">
+             <span className="text-xs text-neutral-400">BG Color:</span>
+             <input 
+                type="color" 
+                value={rgbToHex(bgRgb)} 
+                onChange={(e) => {
+                    setBgType("solid");
+                    setBgRgb(hexToRgb(e.target.value));
+                }}
+                className="bg-transparent border-none w-6 h-6 cursor-pointer"
+             />
+        </div>
 
         {/* mobile drawer toggle */}
         <button
@@ -548,20 +603,31 @@ export default function StickerEditorModern() {
           {drawerOpen ? <X size={18} /> : <Menu size={18} />}
         </button>
 
-        {/* desktop right-side controls */}
+        {/* desktop right-side export controls */}
         <div className="ml-auto hidden md:flex items-center gap-3">
           <button
-            onClick={prepareExport}
+            onClick={() => downloadCanvasPNG()}
             className="bg-neutral-600 px-3 py-2 rounded-lg flex items-center gap-2"
+            title="Download PNG"
           >
-            <Download size={16} /> Export PNG
+            <Download size={16} /> Download
+          </button>
+
+          {/* COPY BUTTON RESTORED */}
+          <button
+            onClick={copyCanvasToClipboard}
+            className="bg-neutral-700 px-3 py-2 rounded-lg flex items-center gap-2"
+            title="Copy image to clipboard"
+          >
+            <Copy size={16} /> Copy Image
           </button>
         </div>
       </div>
 
-      {/* LAYOUT GRID */}
+      
       <div className="md:grid md:grid-cols-[220px_1fr_320px] gap-4">
-        {/* LEFT PANEL (desktop) */}
+        
+        
         <div className="hidden md:block bg-neutral-900 rounded-lg p-3 overflow-auto h-[76vh]">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 text-sm font-semibold">
@@ -605,10 +671,14 @@ export default function StickerEditorModern() {
           )}
         </div>
 
-        {/* CENTER — CANVAS */}
-        <div className="flex items-center justify-center">
-          <div className="bg-neutral-800 p-4 rounded-lg shadow-lg" style={{ width: canvasSize + 40 }}>
-            <div className="bg-white rounded-md overflow-hidden touch-none" style={{ width: canvasSize, height: canvasSize }}>
+        <div className="flex items-center justify-center bg-neutral-800/50 rounded-lg border border-neutral-700">
+          <div 
+            className="relative shadow-lg" 
+            style={{ width: canvasSize + 40 }}
+            ref={canvasContainerRef}
+          >
+            <div className="bg-white mx-auto rounded-md overflow-hidden touch-none relative" style={{ width: canvasSize, height: canvasSize }}>
+              
               <Stage
                 width={canvasSize}
                 height={canvasSize}
@@ -620,25 +690,10 @@ export default function StickerEditorModern() {
                   const clickedOnEmpty =
                     e.target === stage ||
                     targetName === "canvas-background" ||
-                    targetName === "bg-image" ||
-                    className === "Rect" ||
-                    className === "Image";
+                    targetName === "bg-image";
                   if (clickedOnEmpty) {
                     setSelectedId(null);
-                  }
-                }}
-                onTouchStart={(e) => {
-                  const stage = e.target.getStage();
-                  const targetName = e.target.getName ? e.target.getName() : "";
-                  const className = e.target.getClassName ? e.target.getClassName() : "";
-                  const clickedOnEmpty =
-                    e.target === stage ||
-                    targetName === "canvas-background" ||
-                    targetName === "bg-image" ||
-                    className === "Rect" ||
-                    className === "Image";
-                  if (clickedOnEmpty) {
-                    setSelectedId(null);
+                    setEditingId(null);
                   }
                 }}
               >
@@ -671,7 +726,15 @@ export default function StickerEditorModern() {
                         key={el.id}
                         shapeProps={{ ...el }}
                         isSelected={el.id === selectedId}
-                        onSelect={() => setSelectedId(el.id)}
+                        isEditing={el.id === editingId}
+                        onSelect={() => {
+                            setSelectedId(el.id);
+                            setEditingId(null);
+                        }}
+                        onDblClick={() => {
+                            setSelectedId(el.id);
+                            setEditingId(el.id); // Trigger inline editor
+                        }}
                         onChange={(newAttrs) => updateElement(el.id, newAttrs)}
                       />
                     ) : (
@@ -679,17 +742,24 @@ export default function StickerEditorModern() {
                         key={el.id}
                         shapeProps={el}
                         isSelected={el.id === selectedId}
-                        onSelect={() => setSelectedId(el.id)}
+                        onSelect={() => {
+                            setSelectedId(el.id);
+                            setEditingId(null);
+                        }}
                         onChange={(newAttrs) => updateElement(el.id, newAttrs)}
                       />
                     )
                   )}
                 </Layer>
               </Stage>
+              
+              {/* INLINE EDITOR OVERLAY */}
+              {renderInlineEditor()}
+
             </div>
 
             {/* FOOTER */}
-            <div className="mt-3 flex items-center justify-between text-xs text-neutral-400">
+            <div className="mt-3 flex items-center justify-between text-xs text-neutral-400 px-4">
               <div className="flex items-center gap-2">
                 <Eye size={14} /> <span>{elements.length} elements</span>
               </div>
@@ -699,7 +769,7 @@ export default function StickerEditorModern() {
                     <Loader2 size={14} className="animate-spin" /> {loadingMessage}
                   </span>
                 ) : (
-                  <span>Ready</span>
+                  <span>Double-click text to edit • Drag corners to resize</span>
                 )}
               </div>
             </div>
@@ -719,13 +789,8 @@ export default function StickerEditorModern() {
             <div className="text-neutral-500">Select an element to edit</div>
           ) : selectedElement.type === "text" ? (
             <div className="space-y-3">
-              <label className="text-xs">Content</label>
-              <textarea
-                value={selectedElement.text}
-                onChange={(e) => updateElement(selectedElement.id, { text: e.target.value })}
-                className="w-full bg-neutral-800 p-2 rounded text-sm"
-                rows={3}
-              />
+              {/* NOTE: Textarea removed from here, use double click on canvas */}
+              <div className="text-xs text-neutral-400 italic">Double-click text on canvas to type</div>
 
               <div>
                 <label className="text-xs">Font Size: {selectedElement.fontSize}px</label>
@@ -769,31 +834,22 @@ export default function StickerEditorModern() {
                   <button
                     onClick={() => updateElement(selectedElement.id, { align: "left" })}
                     className={`flex-1 py-2 rounded ${selectedElement.align === "left" ? "bg-neutral-500" : "bg-neutral-700"}`}
-                    title="Align left"
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      <AlignLeft size={14} /> Left
-                    </div>
+                    <AlignLeft size={14} className="mx-auto" />
                   </button>
 
                   <button
                     onClick={() => updateElement(selectedElement.id, { align: "center" })}
                     className={`flex-1 py-2 rounded ${selectedElement.align === "center" ? "bg-neutral-500" : "bg-neutral-700"}`}
-                    title="Align center"
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      <AlignCenter size={14} /> Center
-                    </div>
+                    <AlignCenter size={14} className="mx-auto" />
                   </button>
 
                   <button
                     onClick={() => updateElement(selectedElement.id, { align: "right" })}
                     className={`flex-1 py-2 rounded ${selectedElement.align === "right" ? "bg-neutral-500" : "bg-neutral-700"}`}
-                    title="Align right"
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      <AlignRight size={14} /> Right
-                    </div>
+                    <AlignRight size={14} className="mx-auto" />
                   </button>
                 </div>
               </div>
@@ -815,7 +871,7 @@ export default function StickerEditorModern() {
               </div>
 
               <div>
-                <label className="text-xs">Opacity: {Math.round((selectedElement.opacity ?? 1) * 100)}%</label>
+                <label className="text-xs">Opacity</label>
                 <input
                   type="range"
                   min={0}
@@ -835,7 +891,7 @@ export default function StickerEditorModern() {
                   {selectedElement.textBg ? "Text BG: ON" : "Text BG: OFF"}
                 </button>
                 <button className="flex-1 bg-neutral-700 py-2 rounded" onClick={() => deleteElement(selectedElement.id)}>
-                  <Trash2 size={14} />
+                  <Trash2 size={14} className="mx-auto" />
                 </button>
               </div>
 
@@ -892,19 +948,12 @@ export default function StickerEditorModern() {
                 />
               </div>
 
-              <div>
-                <label className="text-xs">Image Tint (color picker + RGB sliders)</label>
-                <RgbPicker
-                  rgb={selectedElement.tintRgb ?? { r: 255, g: 255, b: 255 }}
-                  onChange={(rgb) => updateElement(selectedElement.id, { tintRgb: rgb })}
-                />
-                <div className="text-xs text-neutral-400 mt-1">255,255,255 = original; lower values tint toward black.</div>
-              </div>
+              {/* TINT SLIDER REMOVED AS REQUESTED */}
 
               <div>
                 <label className="text-xs">White Outline</label>
                 <button
-                  className={`px-3 py-2 rounded ${selectedElement.outline ? "bg-neutral-500" : "bg-neutral-700"}`}
+                  className={`px-3 py-2 rounded w-full ${selectedElement.outline ? "bg-neutral-500" : "bg-neutral-700"}`}
                   onClick={() => updateElement(selectedElement.id, { outline: !selectedElement.outline })}
                 >
                   {selectedElement.outline ? "ON" : "OFF"}
@@ -923,19 +972,6 @@ export default function StickerEditorModern() {
                 />
               </div>
 
-              <div>
-                <label className="text-xs">Outline Opacity</label>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={selectedElement.shadowOpacity ?? 1}
-                  onChange={(e) => updateElement(selectedElement.id, { shadowOpacity: parseFloat(e.target.value) })}
-                  className="w-full accent-white"
-                />
-              </div>
-
               <button className="w-full bg-neutral-700 py-2 rounded mt-2" onClick={() => deleteElement(selectedElement.id)}>
                 Delete
               </button>
@@ -943,367 +979,6 @@ export default function StickerEditorModern() {
           )}
         </div>
       </div>
-
-      {/* MOBILE DRAWER */}
-      <div
-        className={`fixed top-0 right-0 h-full w-[92%] max-w-[420px] bg-neutral-900 shadow-xl transform transition-transform duration-300 z-50 md:hidden
-          ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}
-      >
-        <div className="flex items-center justify-between p-3 border-b border-neutral-800">
-          <div className="flex items-center gap-2">
-            <Settings size={16} /> <div className="font-semibold">Editor</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setDrawerTab("elements")}
-              className={`px-2 py-1 rounded text-sm ${drawerTab === "elements" ? "bg-neutral-700" : ""}`}
-            >
-              Elements
-            </button>
-            <button
-              onClick={() => setDrawerTab("properties")}
-              className={`px-2 py-1 rounded text-sm ${drawerTab === "properties" ? "bg-neutral-700" : ""}`}
-            >
-              Properties
-            </button>
-            <button
-              onClick={() => setDrawerTab("background")}
-              className={`px-2 py-1 rounded text-sm ${drawerTab === "background" ? "bg-neutral-700" : ""}`}
-            >
-              Background
-            </button>
-            <button className="ml-2 p-2" onClick={() => setDrawerOpen(false)}>
-              <X />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-3 overflow-auto h-full">
-          {drawerTab === "elements" && (
-            <>
-              <div className="mb-3 text-xs text-neutral-400">Elements ({elements.length})</div>
-              {elements.length === 0 ? (
-                <div className="p-6 text-center text-neutral-500">No elements yet</div>
-              ) : (
-                <div className="space-y-2">
-                  {[...elements].map((el) => (
-                    <div
-                      key={el.id}
-                      onClick={() => {
-                        setSelectedId(el.id);
-                        setDrawerTab("properties");
-                      }}
-                      className={`flex items-center justify-between gap-2 p-2 rounded-lg cursor-pointer hover:bg-neutral-700 ${
-                        selectedId === el.id ? "bg-neutral-600" : "bg-neutral-800"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        {el.type === "text" ? <Type size={14} /> : <ImageIcon size={14} />}
-                        <div className="text-sm truncate min-w-0">{el.type === "text" ? el.text : "Image"}</div>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteElement(el.id);
-                          }}
-                          className="p-1 rounded hover:bg-neutral-600"
-                          title="Delete"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {drawerTab === "properties" && (
-            <>
-              <div className="mb-2 text-xs text-neutral-400">Properties</div>
-              {!selectedElement ? (
-                <div className="text-neutral-500">Select an element to edit</div>
-              ) : selectedElement.type === "text" ? (
-                <div className="space-y-3">
-                  <label className="text-xs">Content</label>
-                  <textarea
-                    value={selectedElement.text}
-                    onChange={(e) => updateElement(selectedElement.id, { text: e.target.value })}
-                    className="w-full bg-neutral-800 p-2 rounded text-sm"
-                    rows={3}
-                  />
-
-                  <div>
-                    <label className="text-xs">Font Size: {selectedElement.fontSize}px</label>
-                    <input
-                      type="range"
-                      min={10}
-                      max={200}
-                      value={selectedElement.fontSize}
-                      onChange={(e) => updateElement(selectedElement.id, { fontSize: parseInt(e.target.value, 10) })}
-                      className="w-full accent-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs">Font Color</label>
-                    <RgbPicker
-                      rgb={selectedElement.fillRgb ?? { r: 255, g: 255, b: 255 }}
-                      onChange={(rgb) => updateElement(selectedElement.id, { fillRgb: rgb })}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs">Font Family</label>
-                    <select
-                      value={selectedElement.fontFamily}
-                      onChange={(e) => updateElement(selectedElement.id, { fontFamily: e.target.value })}
-                      className="w-full bg-neutral-800 p-2 rounded text-sm"
-                    >
-                      {AVAILABLE_FONTS.map((f) => (
-                        <option key={f} value={f}>
-                          {f}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs">Alignment</label>
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => updateElement(selectedElement.id, { align: "left" })}
-                        className={`flex-1 py-2 rounded ${selectedElement.align === "left" ? "bg-neutral-500" : "bg-neutral-700"}`}
-                        title="Align left"
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          <AlignLeft size={14} /> Left
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => updateElement(selectedElement.id, { align: "center" })}
-                        className={`flex-1 py-2 rounded ${selectedElement.align === "center" ? "bg-neutral-500" : "bg-neutral-700"}`}
-                        title="Align center"
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          <AlignCenter size={14} /> Center
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => updateElement(selectedElement.id, { align: "right" })}
-                        className={`flex-1 py-2 rounded ${selectedElement.align === "right" ? "bg-neutral-500" : "bg-neutral-700"}`}
-                        title="Align right"
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          <AlignRight size={14} /> Right
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs">Bold</label>
-                    <button
-                      className={`w-full py-2 mt-1 rounded ${selectedElement.fontStyle === "bold" ? "bg-neutral-500" : "bg-neutral-700"}`}
-                      onClick={() =>
-                        updateElement(selectedElement.id, {
-                          fontStyle: selectedElement.fontStyle === "bold" ? "normal" : "bold",
-                        })
-                      }
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        <Bold size={14} /> {selectedElement.fontStyle === "bold" ? "Bold: ON" : "Bold: OFF"}
-                      </div>
-                    </button>
-                  </div>
-
-                  <div>
-                    <label className="text-xs">Opacity: {Math.round((selectedElement.opacity ?? 1) * 100)}%</label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={selectedElement.opacity ?? 1}
-                      onChange={(e) => updateElement(selectedElement.id, { opacity: parseFloat(e.target.value) })}
-                      className="w-full accent-white"
-                    />
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      className="flex-1 bg-neutral-700 py-2 rounded"
-                      onClick={() => updateElement(selectedElement.id, { textBg: !selectedElement.textBg })}
-                    >
-                      {selectedElement.textBg ? "Text BG: ON" : "Text BG: OFF"}
-                    </button>
-                    <button
-                      className="flex-1 bg-neutral-700 py-2 rounded"
-                      onClick={() => deleteElement(selectedElement.id)}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-
-                  {/* Text BG options */}
-                  {selectedElement.textBg && (
-                    <>
-                      <div>
-                        <label className="text-xs">Text BG Opacity</label>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1}
-                          step={0.01}
-                          value={selectedElement.textBgOpacity ?? 0.6}
-                          onChange={(e) => updateElement(selectedElement.id, { textBgOpacity: parseFloat(e.target.value) })}
-                          className="w-full accent-white"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs">Text BG Color</label>
-                        <RgbPicker
-                          rgb={selectedElement.textBgRgb ?? { r: 0, g: 0, b: 0 }}
-                          onChange={(rgb) => updateElement(selectedElement.id, { textBgRgb: rgb })}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs">Opacity: {Math.round((selectedElement.opacity ?? 1) * 100)}%</label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={selectedElement.opacity ?? 1}
-                      onChange={(e) => updateElement(selectedElement.id, { opacity: parseFloat(e.target.value) })}
-                      className="w-full accent-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs">Rotation: {Math.round(selectedElement.rotation ?? 0)}°</label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={360}
-                      value={selectedElement.rotation ?? 0}
-                      onChange={(e) => updateElement(selectedElement.id, { rotation: parseInt(e.target.value, 10) })}
-                      className="w-full accent-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs">Image Tint (color picker + RGB sliders)</label>
-                    <RgbPicker
-                      rgb={selectedElement.tintRgb ?? { r: 255, g: 255, b: 255 }}
-                      onChange={(rgb) => updateElement(selectedElement.id, { tintRgb: rgb })}
-                    />
-                    <div className="text-xs text-neutral-400 mt-1">255,255,255 = original; lower values tint toward black.</div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs">White Outline</label>
-                    <button
-                      className={`px-3 py-2 rounded ${selectedElement.outline ? "bg-neutral-500" : "bg-neutral-700"}`}
-                      onClick={() => updateElement(selectedElement.id, { outline: !selectedElement.outline })}
-                    >
-                      {selectedElement.outline ? "ON" : "OFF"}
-                    </button>
-                  </div>
-
-                  <div>
-                    <label className="text-xs">Outline Strength</label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={80}
-                      value={selectedElement.shadowBlur ?? 18}
-                      onChange={(e) => updateElement(selectedElement.id, { shadowBlur: parseInt(e.target.value, 10) })}
-                      className="w-full accent-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs">Outline Opacity</label>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={selectedElement.shadowOpacity ?? 1}
-                      onChange={(e) => updateElement(selectedElement.id, { shadowOpacity: parseFloat(e.target.value) })}
-                      className="w-full accent-white"
-                    />
-                  </div>
-
-                  <button className="w-full bg-neutral-700 py-2 rounded mt-2" onClick={() => deleteElement(selectedElement.id)}>
-                    Delete
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Export Modal (styled, theme-aware) */}
-      {exportModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-lg bg-neutral-900 rounded-lg shadow-xl border border-neutral-800">
-            <div className="flex items-center justify-between p-4 border-b border-neutral-800">
-              <div className="text-lg font-semibold">Share your sticker?</div>
-              <button onClick={cancelPending} className="p-2 rounded hover:bg-neutral-800">
-                <X />
-              </button>
-            </div>
-            <div className="p-4">
-              <p className="text-sm text-neutral-300">
-                Would you like to submit your exported sticker to our pending list for possible inclusion in the feed?
-              </p>
-
-              <div className="mt-4 flex gap-3">
-                <button
-                  onClick={() => submitPending()}
-                  disabled={submittingPending}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-black py-2 rounded font-semibold"
-                >
-                  {submittingPending ? "Submitting..." : "Yes — submit"}
-                </button>
-
-                <button
-                  onClick={cancelPending}
-                  className="flex-1 bg-neutral-700 hover:bg-neutral-600 py-2 rounded"
-                >
-                  No, thanks
-                </button>
-              </div>
-
-              <div className="mt-4 text-xs text-neutral-400">
-                We will only save the exported image URL to a local pending list (pending.json). Your image will not be added to the feed unless approved.
-              </div>
-
-              {/* preview */}
-              {exportingUri && (
-                <div className="mt-4 bg-neutral-800 rounded p-2">
-                  <div className="text-xs text-neutral-400 mb-2">Preview (exported image)</div>
-                  <img src={exportingUri} alt="export preview" className="w-full rounded" />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
