@@ -157,6 +157,7 @@ const TextElement = ({ shapeProps, isSelected, onSelect, onChange, onDblClick, i
         onClick={onSelect}
         onTap={onSelect}
         onDblClick={onDblClick}
+        onDblTap={onDblClick} /* <--- ADD THIS LINE */
         onDragEnd={(e) => onChange({ ...shapeProps, x: e.target.x(), y: e.target.y() })}
         onTransformEnd={() => {
           const node = shapeRef.current;
